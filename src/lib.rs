@@ -25,7 +25,7 @@ pub mod parser {
     }
 
     #[derive(Debug)]
-    pub enum Token {
+    pub enum TokenType {
         IgnoreCase,
         WordMod,
         RegexMod,
@@ -39,26 +39,29 @@ pub mod parser {
         Arg
     }
 
-    impl Copy for Token { }
-    impl Clone for Token {
-        fn clone(&self) -> Token {
+    impl Copy for TokenType { }
+    impl Clone for TokenType {
+        fn clone(&self) -> TokenType {
             *self
         }
     }
 
-    pub struct OptData(Token, char, &'static str, bool);
+    pub struct OptData(TokenType, char, &'static str, bool);
     const OPTIONS: [OptData; 10] = [
-        OptData(Token::IgnoreCase, 'i', "ignore-case", false),
-        OptData(Token::WordMod, 'w', "word", false),
-        OptData(Token::RegexMod, 'x', "regex", false),
-        OptData(Token::Confirm, 'c', "confirm", false),
-        OptData(Token::Excluded, 'e', "excluded", true),
-        OptData(Token::FileMask, 'm', "mask", true),
-        OptData(Token::File, 'f', "file", true),
-        OptData(Token::Help, 'h', "help", false),
-        OptData(Token::Verbose, 'v', "verbose", false),
-        OptData(Token::Recursive, 'r', "recursive", false)
+        OptData(TokenType::IgnoreCase, 'i', "ignore-case", false),
+        OptData(TokenType::WordMod, 'w', "word", false),
+        OptData(TokenType::RegexMod, 'x', "regex", false),
+        OptData(TokenType::Confirm, 'c', "confirm", false),
+        OptData(TokenType::Excluded, 'e', "excluded", true),
+        OptData(TokenType::FileMask, 'm', "mask", true),
+        OptData(TokenType::File, 'f', "file", true),
+        OptData(TokenType::Help, 'h', "help", false),
+        OptData(TokenType::Verbose, 'v', "verbose", false),
+        OptData(TokenType::Recursive, 'r', "recursive", false)
     ];
+
+    #[derive(Debug)]
+    pub struct Token(TokenType, Option<String>);
 
     fn find_option<'a>(short: Option<char>, long: Option<&'a str>) -> Result<&'a OptData, &'static str> {
         for option in &OPTIONS {
@@ -86,9 +89,8 @@ pub mod parser {
                 let arg_opt = &current_arg[i..];
                 if arg_opt.len() > 0 {
                     tokens.push(Token(option.0, Some(String::from(arg_opt))))
-                } else {
-
                 }
+
             }
         }
         Ok(())
@@ -100,7 +102,7 @@ pub mod parser {
             None => {
                 let option = find_option(None, Some(&current_arg))?;
                 if option.3 == false {
-                    tokens.push(option.0);
+                    tokens.push(Token(option.0, None));
                 } else {
                     return Err("bad synthax")
                 }
@@ -135,7 +137,7 @@ pub mod parser {
                 parse_opt(args, &arg, &mut tokens)?;
             } else {
                 println!("arg");
-                tokens.push(Token(Token::Arg, Some(String::from(arg))));
+                tokens.push(Token(TokenType::Arg, Some(String::from(arg))));
             }
         }
         dbg!(tokens);
