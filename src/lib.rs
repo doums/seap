@@ -1,4 +1,11 @@
 pub mod cli_parser {
+    #[derive(Debug)]
+    pub struct Parser {
+        args: std::env::Args,
+        flags: Vec<Flag>,
+    }
+
+    #[derive(Debug)]
     pub struct Flag(pub &'static str, pub char, pub &'static str, pub bool);
 
     #[derive(Debug)]
@@ -95,21 +102,41 @@ pub mod cli_parser {
         Ok(())
     }
 
-    pub fn tokenize(mut args: std::env::Args, options: &[Flag]) -> Result<Vec<Token>, String> {
-        let mut tokens: Vec<Token> = vec![];
-        let mut accept_opt = true;
-        args.next(); //skip the binary
-        while let Some(arg) = args.next() {
-            if arg.len() == 2 && &arg[..2] == "--" {
-                accept_opt = false;
-            } else if arg.len() > 2 && &arg[..2] == "--" && accept_opt == true {
-                parse_long_opt(&mut args, options, &arg, &mut tokens)?;
-            } else if arg.len() > 1 && &arg[..1] == "-" && accept_opt == true {
-                parse_opt(&mut args, options, &arg, &mut tokens)?;
-            } else {
-                tokens.push(Token("arg", Some(String::from(arg))));
+    impl Parser {
+        pub fn new(mut args: std::env::Args) -> Parser {
+            Parser {
+                args: args,
+                flags: Vec::new(),
             }
         }
-        Ok(tokens)
+
+        pub fn flag(
+            &mut self,
+            name: &'static str,
+            c: char,
+            long: &'static str,
+            arg: bool,
+        ) -> &mut Parser {
+            self.flags.push(Flag(name, c, long, arg));
+            self
+        }
+
+        pub fn tokenize(&mut self) -> Result<Vec<Token>, String> {
+            let mut tokens: Vec<Token> = vec![];
+            let mut accept_opt = true;
+            self.args.next(); //skip the binary
+            while let Some(arg) = self.args.next() {
+                if arg.len() == 2 && &arg[..2] == "--" {
+                    accept_opt = false;
+                } else if arg.len() > 2 && &arg[..2] == "--" && accept_opt == true {
+                    parse_long_opt(&mut self.args, &self.flags, &arg, &mut tokens)?;
+                } else if arg.len() > 1 && &arg[..1] == "-" && accept_opt == true {
+                    parse_opt(&mut self.args, &self.flags, &arg, &mut tokens)?;
+                } else {
+                    tokens.push(Token("arg", Some(String::from(arg))));
+                }
+            }
+            Ok(tokens)
+        }
     }
 }
