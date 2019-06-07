@@ -1,4 +1,5 @@
 pub mod cli_parser {
+
     #[derive(Debug)]
     pub struct Parser {
         args: std::env::Args,
@@ -6,7 +7,7 @@ pub mod cli_parser {
     }
 
     #[derive(Debug)]
-    pub struct Flag(pub &'static str, pub char, pub &'static str, pub bool);
+    pub struct Flag(&'static str, char, &'static str, bool);
 
     #[derive(Debug)]
     pub struct Token(&'static str, Option<String>);
@@ -52,7 +53,7 @@ pub mod cli_parser {
                             tokens.push(Token(option.0, Some(String::from(str))));
                             return Ok(());
                         }
-                        None => return Err(format!("argument missing for flag \"{}\"", option.0)),
+                        None => return Err(format!("missing value for flag \"{}\"", option.0)),
                     }
                 }
             } else {
@@ -79,7 +80,7 @@ pub mod cli_parser {
                             tokens.push(Token(option.0, Some(String::from(str))));
                             return Ok(());
                         }
-                        None => return Err(format!("argument missing for flag \"{}\"", option.0)),
+                        None => return Err(format!("missing value for flag \"{}\"", option.0)),
                     }
                 } else {
                     tokens.push(Token(option.0, None));
@@ -91,7 +92,8 @@ pub mod cli_parser {
                 if first.len() == 0 || last.len() == 0 {
                     return Err(format!("bad syntax for flag \"{}\"", current_arg));
                 }
-                let option = find_option(options, None, Some(first))?;
+                let option = find_option(options, None, Some(first))
+                    .map_err(|_| format!("flag unknown \"{}\"", first))?;
                 if option.3 == true {
                     tokens.push(Token(option.0, Some(String::from(last))));
                 } else {
@@ -103,7 +105,7 @@ pub mod cli_parser {
     }
 
     impl Parser {
-        pub fn new(mut args: std::env::Args) -> Parser {
+        pub fn new(args: std::env::Args) -> Parser {
             Parser {
                 args: args,
                 flags: Vec::new(),
@@ -113,11 +115,31 @@ pub mod cli_parser {
         pub fn flag(
             &mut self,
             name: &'static str,
-            c: char,
+            short: char,
             long: &'static str,
-            arg: bool,
+            takes_value: bool,
         ) -> &mut Parser {
-            self.flags.push(Flag(name, c, long, arg));
+            self.flags.push(Flag(name, short, long, takes_value));
+            self
+        }
+
+        pub fn help(&mut self) -> &mut Parser {
+            self.flags.push(Flag("help", 'h', "help", false));
+            self
+        }
+
+        pub fn verbose(&mut self) -> &mut Parser {
+            self.flags.push(Flag("verbose", 'V', "verbose", false));
+            self
+        }
+
+        pub fn version(&mut self) -> &mut Parser {
+            self.flags.push(Flag("version", 'v', "version", false));
+            self
+        }
+
+        pub fn debug(&mut self) -> &mut Parser {
+            self.flags.push(Flag("debug", 'd', "debug", false));
             self
         }
 
